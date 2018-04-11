@@ -10,7 +10,7 @@ import UIKit
 import SceneKit
 import ARKit
 
-class RamPlacerVC: UIViewController, ARSCNViewDelegate {
+class RamPlacerVC: UIViewController, ARSCNViewDelegate,UIPopoverPresentationControllerDelegate {
 
     @IBOutlet var sceneView: ARSCNView!
     
@@ -24,7 +24,7 @@ class RamPlacerVC: UIViewController, ARSCNViewDelegate {
         sceneView.showsStatistics = true
         
         // Create a new scene
-        let scene = SCNScene(named: "art.scnassets/ship.scn")!
+        let scene = SCNScene(named: "art.scnassets/pipe.dae")!
         
         // Set the scene to the view
         sceneView.scene = scene
@@ -75,6 +75,12 @@ class RamPlacerVC: UIViewController, ARSCNViewDelegate {
     
     func sessionInterruptionEnded(_ session: ARSession) {
         // Reset tracking and/or remove existing anchors if consistent tracking is required
+        
+    }
+    @IBAction func onRampBtnPressed(_ sender: UIButton) {
+        
+        
+        
         
     }
 }
