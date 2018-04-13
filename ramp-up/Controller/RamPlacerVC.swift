@@ -11,9 +11,15 @@ import SceneKit
 import ARKit
 
 class RamPlacerVC: UIViewController, ARSCNViewDelegate,UIPopoverPresentationControllerDelegate {
-
-    @IBOutlet var sceneView: ARSCNView!
     
+    @IBOutlet var sceneView: ARSCNView!
+    var selectedRampName: String?
+    var selectedRamp: SCNNode?
+    
+    @IBOutlet weak var rotateBtn: UIButton!
+    @IBOutlet weak var upBtn: UIButton!
+    @IBOutlet weak var downBtn: UIButton!
+    @IBOutlet weak var controls: UIStackView!
     override func viewDidLoad() {
         super.viewDidLoad()
         
@@ -24,10 +30,22 @@ class RamPlacerVC: UIViewController, ARSCNViewDelegate,UIPopoverPresentationCont
         sceneView.showsStatistics = true
         
         // Create a new scene
-        let scene = SCNScene(named: "art.scnassets/pipe.dae")!
+        let scene = SCNScene(named: "art.scnassets/main.scn")!
+        sceneView.autoenablesDefaultLighting = true
         
         // Set the scene to the view
         sceneView.scene = scene
+        
+        let gesture1 =  UILongPressGestureRecognizer(target: self, action: #selector(onLongPressed(_:)))
+        let gesture2 =  UILongPressGestureRecognizer(target: self, action: #selector(onLongPressed(_:)))
+        let gesture3 =  UILongPressGestureRecognizer(target: self, action: #selector(onLongPressed(_:)))
+        gesture1.minimumPressDuration = 0.1
+        gesture2.minimumPressDuration = 0.1
+        gesture3.minimumPressDuration = 0.1
+        
+        rotateBtn.addGestureRecognizer(gesture1)
+        upBtn.addGestureRecognizer(gesture2)
+        downBtn.addGestureRecognizer(gesture3)
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -35,7 +53,7 @@ class RamPlacerVC: UIViewController, ARSCNViewDelegate,UIPopoverPresentationCont
         
         // Create a session configuration
         let configuration = ARWorldTrackingConfiguration()
-
+        
         // Run the view's session
         sceneView.session.run(configuration)
     }
@@ -51,31 +69,37 @@ class RamPlacerVC: UIViewController, ARSCNViewDelegate,UIPopoverPresentationCont
         super.didReceiveMemoryWarning()
         // Release any cached data, images, etc that aren't in use.
     }
-
+    
     // MARK: - ARSCNViewDelegate
     
-/*
-    // Override to create and configure nodes for anchors added to the view's session.
-    func renderer(_ renderer: SCNSceneRenderer, nodeFor anchor: ARAnchor) -> SCNNode? {
-        let node = SCNNode()
+    /*
+     // Override to create and configure nodes for anchors added to the view's session.
+     func renderer(_ renderer: SCNSceneRenderer, nodeFor anchor: ARAnchor) -> SCNNode? {
+     let node = SCNNode()
      
-        return node
-    }
-*/
+     return node
+     }
+     */
     
     func session(_ session: ARSession, didFailWithError error: Error) {
         // Present an error message to the user
-        
     }
     
     func sessionWasInterrupted(_ session: ARSession) {
         // Inform the user that the session has been interrupted, for example, by presenting an overlay
-        
     }
     
     func sessionInterruptionEnded(_ session: ARSession) {
         // Reset tracking and/or remove existing anchors if consistent tracking is required
         
+    }
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        guard let touch = touches.first else { return }
+        let results = sceneView.hitTest(touch.location(in: sceneView), types: .featurePoint)
+        guard let hitFeatures = results.last else { return }
+        let hitTransform = SCNMatrix4(hitFeatures.worldTransform)
+        let hitPosition = SCNVector3Make(hitTransform.m41, hitTransform.m42, hitTransform.m43)
+        placeRamp(position: hitPosition)
     }
     
     func adaptivePresentationStyle(for controller: UIPresentationController) -> UIModalPresentationStyle {
@@ -93,12 +117,48 @@ class RamPlacerVC: UIViewController, ARSCNViewDelegate,UIPopoverPresentationCont
         rampPickerVC.popoverPresentationController?.sourceRect = sender.bounds
     }
     
-    
-    
     func onRampSeleted(_ name:String) {
-        
-        
+        selectedRampName = name
     }
     
+    func placeRamp(position:SCNVector3) {
+        
+        if let rampName = selectedRampName {
+            controls.isHidden = false
+            let ramp = Ramp.getRampName(rampName: rampName)
+            selectedRamp = ramp
+            ramp.position = position
+            ramp.scale = SCNVector3Make(0.01, 0.01, 0.01)
+            sceneView.scene.rootNode.addChildNode(ramp)
+        }
+    }
     
+    @IBAction func removedBtnWasPressed(_ sender: Any) {
+        
+        if let ramp = selectedRamp {
+            ramp.removeFromParentNode()
+            selectedRampName = nil
+        }
+    }
+    
+    @objc func onLongPressed(_ gestureRecoginzer:UILongPressGestureRecognizer) {
+        
+        if let ramp = selectedRamp {
+            if gestureRecoginzer.state == .ended {
+                ramp.removeAllActions()
+            }else if gestureRecoginzer.state == .began {
+                if gestureRecoginzer.view === rotateBtn {
+                    let rotate = SCNAction.repeatForever(SCNAction.rotateBy(x: 0, y: CGFloat(0.08 * Double.pi), z: 0, duration: 0.1))
+                    ramp.runAction(rotate)
+                }else if gestureRecoginzer.view === upBtn {
+                    let move = SCNAction.moveBy(x: 0, y: 0.08, z: 0, duration: 0.1)
+                    ramp.runAction(move)
+                }else if gestureRecoginzer.view === downBtn {
+                    let move = SCNAction.moveBy(x: 0, y: 0.08, z: 0, duration: 0.1)
+                    ramp.runAction(move)
+                }
+            }
+        }
+    }
 }
+
